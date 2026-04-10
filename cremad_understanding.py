@@ -45,7 +45,7 @@ STATEMENT_MAP = {
     "TSI": "The surface is slick",
     "WSI": "We'll stop in a couple of minutes",
 }
-# Gender from CREMA-D published demographics (VideoDemographics.csv)
+
 MALE_ACTORS = {
     1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008, 1009, 1010,
     1012, 1013, 1014, 1016, 1017, 1018, 1019, 1020, 1021, 1022,
@@ -226,16 +226,17 @@ axes2[0].bar(actor_counts.index, actor_counts.values, color="#4C72B0")
 axes2[0].set_title("Files per Actor")
 axes2[0].set_xlabel("Actor ID")
 axes2[0].set_ylabel("Count")
-axes2[0].set_xticks(sorted(valid["actor_id"].unique()))
-axes2[0].tick_params(axis="x", rotation=90)
+cremad_ids = sorted(valid["actor_id"].unique())
+axes2[0].set_xticks([x for x in cremad_ids if x % 5 == 0 or x == cremad_ids[0]])
+axes2[0].tick_params(axis="x", rotation=45, labelsize=8)
 
 actor_dur = valid.groupby("actor_id")["duration_sec"].mean().sort_index()
 axes2[1].bar(actor_dur.index, actor_dur.values, color="#55A868")
 axes2[1].set_title("Mean Duration per Actor")
 axes2[1].set_xlabel("Actor ID")
 axes2[1].set_ylabel("Duration (seconds)")
-axes2[1].set_xticks(sorted(valid["actor_id"].unique()))
-axes2[1].tick_params(axis="x", rotation=90)
+axes2[1].set_xticks([x for x in cremad_ids if x % 5 == 0 or x == cremad_ids[0]])
+axes2[1].tick_params(axis="x", rotation=45, labelsize=8)
 
 plt.tight_layout(rect=[0, 0, 1, 0.92])
 plt.savefig(os.path.join(OUTPUT_DIR, "cremad_eda_actors.png"), dpi=150, bbox_inches="tight")
@@ -309,7 +310,7 @@ print(f"\nFull metadata saved to: {csv_path}")
 
 # COMBINED CSV
 print("\n" + "=" * 60)
-print("GENERATING COMBINED CSV")
+print("COMBINED CSV")
 print("=" * 60)
 
 ravdess = pd.read_csv(os.path.join(OUTPUT_DIR, "ravdess_metadata.csv"))
@@ -392,8 +393,9 @@ axes5[0].bar(actor_counts_comb.index, actor_counts_comb.values, color=bar_colors
 axes5[0].set_title("Files per Actor  (blue = RAVDESS, orange = CREMA-D)")
 axes5[0].set_xlabel("Actor ID")
 axes5[0].set_ylabel("Count")
-axes5[0].set_xticks(sorted(combined["actor_id"].unique()))
-axes5[0].tick_params(axis="x", rotation=90)
+all_ids = sorted(combined["actor_id"].unique())
+axes5[0].set_xticks([x for x in all_ids if x % 5 == 0 or x == all_ids[0]])
+axes5[0].tick_params(axis="x", rotation=45, labelsize=8)
 
 actor_dur_comb = combined.groupby("actor_id")["duration_sec"].mean().sort_index()
 bar_colors_dur = ["#4C72B0" if aid <= 24 else "#DD8452" for aid in actor_dur_comb.index]
@@ -401,8 +403,8 @@ axes5[1].bar(actor_dur_comb.index, actor_dur_comb.values, color=bar_colors_dur)
 axes5[1].set_title("Mean Duration per Actor  (blue = RAVDESS, orange = CREMA-D)")
 axes5[1].set_xlabel("Actor ID")
 axes5[1].set_ylabel("Duration (seconds)")
-axes5[1].set_xticks(sorted(combined["actor_id"].unique()))
-axes5[1].tick_params(axis="x", rotation=90)
+axes5[1].set_xticks([x for x in all_ids if x % 5 == 0 or x == all_ids[0]])
+axes5[1].tick_params(axis="x", rotation=45, labelsize=8)
 
 plt.tight_layout(rect=[0, 0, 1, 0.92])
 plt.savefig(os.path.join(OUTPUT_DIR, "combined_eda_actors.png"), dpi=150, bbox_inches="tight")
