@@ -1,7 +1,5 @@
 import os
 import json
-import numpy as np
-import torch
 import torch.nn as nn
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import ReduceLROnPlateau
@@ -13,11 +11,7 @@ from config import *
 from dataset import get_dataloaders
 from model import SERModel, count_parameters
 
-
-# ---------------------------------------------------------------------------
 # Training and evaluation steps
-# ---------------------------------------------------------------------------
-
 def train_one_epoch(model, loader, criterion, optimizer, device):
     model.train()
     total_loss, correct, total = 0.0, 0, 0
@@ -30,7 +24,7 @@ def train_one_epoch(model, loader, criterion, optimizer, device):
         loss = criterion(logits, labels)
         loss.backward()
 
-        # Gradient clipping — important for LSTM stability
+        # Gradient clipping for LSTM stability
         nn.utils.clip_grad_norm_(model.parameters(), max_norm=5.0)
         optimizer.step()
 
@@ -65,11 +59,7 @@ def evaluate(model, loader, criterion, device):
     f1 = f1_score(all_labels, all_preds, average="weighted")
     return total_loss / total, correct / total, f1, all_preds, all_labels
 
-
-# ---------------------------------------------------------------------------
 # Plotting
-# ---------------------------------------------------------------------------
-
 def plot_training_curves(history: dict, save_path: str):
     fig, axes = plt.subplots(1, 3, figsize=(15, 4))
 
@@ -108,36 +98,44 @@ def plot_confusion_matrix(labels, preds, save_path: str):
     plt.close()
     print(f"Confusion matrix saved to {save_path}")
 
-
-# ---------------------------------------------------------------------------
 # Main training loop
-# ---------------------------------------------------------------------------
-
 def train():
     os.makedirs(CHECKPOINT_DIR, exist_ok=True)
 
     # --- Data ---
     train_loader, val_loader, test_loader, class_weights = get_dataloaders()
 
-    # --- Model ---
+    if USE_CLASS_WEIGHTS:
+        if BINARY_MODE:
+            # Boost neutral/positive weight — under recalled due to class imbalance
+            class_weights[EMOTIONS.index("neutral/positive")] *= 1.5
+        print(f"Class weights: { {e: f'{class_weights[i]:.3f}' for i, e in enumerate(EMOTIONS)} }\n")
+    else:
+        class_weights = None
+        print("Class weights: disabled (uniform)\n")
+
+    # Model
     device = torch.device(DEVICE)
     model = SERModel().to(device)
     print(f"Model parameters: {count_parameters(model):,}")
     print(f"Training on: {device}\n")
 
-    # --- Loss: weighted cross-entropy to handle class imbalance ---
-    criterion = nn.CrossEntropyLoss(weight=class_weights.to(device), label_smoothing=LABEL_SMOOTHING)
+    # Loss: weighted cross entropy so it can handle class imbalance better
+    criterion = nn.CrossEntropyLoss(
+        weight=class_weights.to(device) if class_weights is not None else None,
+        label_smoothing=LABEL_SMOOTHING
+    )
 
-    # --- Optimiser ---
+    #Optimiser
     optimizer = AdamW(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
 
-    # --- LR scheduler ---
+    #LR scheduler
     scheduler = ReduceLROnPlateau(
         optimizer, mode="max", factor=LR_FACTOR,
         patience=LR_PATIENCE
     )
 
-    # --- Training loop ---
+    #Training loop
     history = {"train_loss": [], "train_acc": [], "val_loss": [], "val_acc": [], "val_f1": []}
     best_val_f1 = 0.0
     epochs_no_improve = 0
@@ -179,13 +177,13 @@ def train():
                 print(f"\nEarly stopping triggered after {epoch} epochs.")
                 break
 
-    # --- Save training history ---
+    #Save training history
     with open(os.path.join(CHECKPOINT_DIR, "history.json"), "w") as f:
         json.dump(history, f, indent=2)
 
     plot_training_curves(history, os.path.join(CHECKPOINT_DIR, "training_curves.png"))
 
-    # --- Final evaluation on test set ---
+    #Final evaluation on test set
     print("\n--- Test Set Evaluation ---")
     checkpoint = torch.load(best_checkpoint, map_location=device)
     model.load_state_dict(checkpoint["model_state_dict"])

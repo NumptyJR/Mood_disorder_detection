@@ -1,13 +1,10 @@
-import torch
 import torch.nn as nn
 from config import *
 
 
 class ConvBlock(nn.Module):
     """
-    Conv2d → BatchNorm → ReLU → MaxPool → Dropout
-    The CNN backbone treats the mel spectrogram like a 2D image,
-    learning local frequency-time acoustic patterns.
+    Conv2d - BatchNorm - ReLU - MaxPool - Dropout
     """
 
     def __init__(self, in_channels: int, out_channels: int, pool_size=(2, 2)):
@@ -28,12 +25,6 @@ class ConvBlock(nn.Module):
 
 
 class AttentionPooling(nn.Module):
-    """
-    Soft attention over the time axis of the LSTM output.
-    Lets the model learn which time steps are most emotionally salient
-    rather than blindly averaging across the whole sequence.
-    """
-
     def __init__(self, hidden_size: int):
         super().__init__()
         self.attention = nn.Linear(hidden_size, 1)
@@ -47,23 +38,6 @@ class AttentionPooling(nn.Module):
 
 
 class SERModel(nn.Module):
-    """
-    Speech Emotion Recognition model trained from scratch.
-
-    Architecture:
-      Input: Log-Mel spectrogram  (batch, 1, n_mels, time_frames)
-        ↓
-      3 × ConvBlock               (learns local acoustic features)
-        ↓
-      Reshape → (batch, time', freq_channels)
-        ↓
-      2-layer Bidirectional LSTM  (captures temporal dynamics)
-        ↓
-      Attention pooling           (focus on emotionally rich frames)
-        ↓
-      Fully-connected head → softmax over NUM_CLASSES
-    """
-
     def __init__(self):
         super().__init__()
 
